@@ -121,7 +121,7 @@ def recommend_wine(wine_input: str):
 
     # get all wines to recomment:
     token = get_token()
-
+    #get changes
     # Obtener todos los vinos usando el token
     wines = get_all_wines(token)
     df = pd.DataFrame(wines)
