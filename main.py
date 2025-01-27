@@ -7,6 +7,8 @@ import json
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
+from fastapi.middleware.cors import CORSMiddleware
+
 
 # Cargar el archivo .env
 load_dotenv()
@@ -19,6 +21,17 @@ USER_PASSWORD = os.getenv("PASSWORD")
 # URLs de los endpoints
 LOGIN_URL = "https://wineme-api.vercel.app/user/login"
 WINES_URL = "https://wineme-api.vercel.app/api/wines"
+
+# Configuración de CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Puedes cambiar "*" por el dominio del frontend (ej. "http://localhost:3000")
+    allow_credentials=True,
+    allow_methods=["*"],  # Permitir todos los métodos (GET, POST, etc.)
+    allow_headers=["*"],  # Permitir todos los encabezados
+)
+
+
 
 def get_token():
     """Obtener el token de autenticación usando las credenciales del usuario"""
