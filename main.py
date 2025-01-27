@@ -130,5 +130,4 @@ def recommend_wine(wine_input: str):
     tfidf_matrix_long = normalizeDF(df)
     similarity_matrix_long = similitudCoseno(df)
     descriptions = df['CombinedTextLong'].tolist()
-    wine_id = 43 #random.randint(0, len(df) -1 )
     return getTopSimilarities(similarity_matrix_long, df, wine_index = wine_id, top_n=3)
