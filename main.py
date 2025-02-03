@@ -8,7 +8,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
-import time
+from datetime import datetime
+
 
 # Cargar el archivo .env
 load_dotenv()
@@ -126,7 +127,7 @@ def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
         similarity_score = similarities[idx]
         results['Items'].append(df.iloc[idx].to_dict())
         print(f"   - {similar_name} --- Descripción: {similar_description}")
-    print("Time end: ", time.now())
+    print("Time end: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     return results
 
 @app.post("/ping")
@@ -135,7 +136,7 @@ def ping():
 
 @app.post("/recommend")
 def recommend_wine(wine_input: str):
-    print("Time start: ", time.now())
+    print("Time start: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     # get all wines to recomment:
     token = get_token()
     #get changes
