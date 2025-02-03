@@ -128,6 +128,9 @@ def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
         print(f"   - {similar_name} --- Descripción: {similar_description}")
     return results
 
+@app.post("/ping")
+def ping():
+    return {"ping": "pong"}
 
 @app.post("/recommend")
 def recommend_wine(wine_input: str):
