@@ -9,7 +9,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime
+import aiocron
+import asyncio
+import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Cargar el archivo .env
 load_dotenv()
@@ -23,6 +32,13 @@ USER_PASSWORD = os.getenv("PASSWORD")
 LOGIN_URL = "https://wineme-api.vercel.app/user/login"
 WINES_URL = "https://wineme-api.vercel.app/api/wines"
 
+# Health check state
+health_status = {
+    "is_healthy": True,
+    "last_check": datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+    "failures": 0
+}
+
 # Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
@@ -31,8 +47,6 @@ app.add_middleware(
     allow_methods=["*"],  # Permitir todos los métodos (GET, POST, etc.)
     allow_headers=["*"],  # Permitir todos los encabezados
 )
-
-
 
 def get_token():
     """Obtener el token de autenticación usando las credenciales del usuario"""
@@ -77,7 +91,6 @@ def normalizeDF(df):
     df['CombinedTextLong'] = df['Description'] + " " + df['Variety'].fillna("") + " Taninos=" + df['Taninos'].fillna("") + " Madera=" + df['Madera'].fillna("") + " Acidez=" + df['Acidez'].fillna("") + " Cuerpo=" + df['Cuerpo'].fillna("")
     tfidf_matrix_long = vectorizer.fit_transform(df['CombinedTextLong'])
     df['TFIDF_Vector_long'] = list(tfidf_matrix_long.toarray())
-    #df = classify_wines(df)
     return tfidf_matrix_long
 
 def similitudCoseno(df):
@@ -134,12 +147,22 @@ def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
 def ping():
     return {"ping": "pong"}
 
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint that returns the current health status
+    """
+    return {
+        "status": "healthy" if health_status["is_healthy"] else "unhealthy",
+        "last_check": health_status["last_check"],
+        "failures": health_status["failures"]
+    }
+
 @app.post("/recommend")
 def recommend_wine(wine_input: str):
     print("Time start: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     # get all wines to recomment:
     token = get_token()
-    #get changes
     # Obtener todos los vinos usando el token
     wines = get_all_wines(token)
     df = pd.DataFrame(wines)
@@ -149,3 +172,62 @@ def recommend_wine(wine_input: str):
     similarity_matrix_long = similitudCoseno(df)
     descriptions = df['CombinedTextLong'].tolist()
     return getTopSimilarities(similarity_matrix_long, df, wine_index = wine_id, top_n=3)
+
+# Health check function that will be scheduled
+async def run_health_check():
+    """
+    Performs a health check by testing the connection to the API and updating the health status
+    """
+    global health_status
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    try:
+        # Test connection to login endpoint
+        login_data = {
+            "email": USER_EMAIL,
+            "password": USER_PASSWORD
+        }
+        login_response = requests.post(LOGIN_URL, json=login_data, timeout=10)
+
+        if login_response.status_code != 200:
+            raise Exception(f"Login API returned status code: {login_response.status_code}")
+
+        token = login_response.json().get("token")
+        if not token:
+            raise Exception("No token received from login API")
+
+        # Test connection to wines endpoint
+        headers = {"Authorization": f"Bearer {token}"}
+        wines_response = requests.get(WINES_URL, headers=headers, timeout=10)
+
+        if wines_response.status_code != 200:
+            raise Exception(f"Wines API returned status code: {wines_response.status_code}")
+
+        # If we got here, everything is working properly
+        health_status["is_healthy"] = True
+        health_status["failures"] = 0
+        logger.info("Health check passed successfully")
+
+    except Exception as e:
+        health_status["is_healthy"] = False
+        health_status["failures"] += 1
+        logger.error(f"Health check failed: {str(e)}")
+
+    # Update the last check timestamp regardless of result
+    health_status["last_check"] = current_time
+
+# Set up the cron job to run health check every 2 minutes
+@aiocron.crontab('*/2 * * * *')  # Run every 2 minutes
+async def scheduled_health_check():
+    logger.info("Running scheduled health check")
+    await run_health_check()
+
+@app.on_event("startup")
+async def startup_event():
+    # Run an initial health check on startup
+    logger.info("Running initial health check on startup")
+    await run_health_check()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
