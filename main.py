@@ -87,7 +87,7 @@ def normalizeDF(df):
     ''' normalizes the df '''
     # Convertir las descripciones en una matriz TF-IDF
     vectorizer = TfidfVectorizer()
-    df['CombinedTextLong'] = df['Description'] + " " + df['Variety'].fillna("") + " Taninos=" + df['Taninos'].fillna("") + " Madera=" + df['Madera'].fillna("") + " Acidez=" + df['Acidez'].fillna("") + " Cuerpo=" + df['Cuerpo'].fillna("")
+    df['CombinedTextLong'] = df['description'] + " " + df['variety'].fillna("") + " Taninos=" + str(df['taninos'].fillna("")) + " Madera=" + str(df['guarda'].fillna("")) + " Acidez=" + str(df['acidez'].fillna("")) + " Cuerpo=" + str(df['cuerpo'].fillna(""))
     tfidf_matrix_long = vectorizer.fit_transform(df['CombinedTextLong'])
     df['TFIDF_Vector_long'] = list(tfidf_matrix_long.toarray())
     return tfidf_matrix_long
@@ -126,14 +126,13 @@ def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
 
     # Imprimir resultados
     current_description = df.iloc[wine_index]['CombinedTextLong']
-    current_name = f"{df.iloc[wine_index]['Winery']}, {df.iloc[wine_index]['Name']}"
+    current_name = f"{df.iloc[wine_index]['winery']}, {df.iloc[wine_index]['name']}"
     print(f"Vino elegido: {current_name} --- Descripción: {current_description}\n")
     df.drop(columns=["TFIDF_Vector_long"], inplace=True)
-    df.drop(columns=["__v"], inplace=True)
     print(f"Top {top_n} vinos más similares:")
     results = {"Items": []}
     for idx in top_similar_indices:
-        similar_name = f"{df.iloc[idx]['Winery']}, {df.iloc[idx]['Name']}"
+        similar_name = f"{df.iloc[idx]['winery']}, {df.iloc[idx]['name']}"
         similar_description = df.iloc[idx]['CombinedTextLong']
         similarity_score = similarities[idx]
         results['Items'].append(df.iloc[idx].to_dict())
@@ -160,8 +159,9 @@ def recommend_wine(wine_input: str):
     # Obtener todos los vinos usando el token
     wines = get_all_wines(token)
     df = pd.DataFrame(wines)
-    # get the wine id based on the wine_input which is in the Name column of the dataframe
-    wine_id = df[df['Name'] == wine_input].index[0]
+    print("df: ", df.head())
+    # get the wine id based on the wine_input which is in the name column of the dataframe
+    wine_id = df[df['name'] == wine_input].index[0]
     tfidf_matrix_long = normalizeDF(df)
     similarity_matrix_long = similitudCoseno(df)
     descriptions = df['CombinedTextLong'].tolist()
