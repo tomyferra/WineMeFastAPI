@@ -29,8 +29,8 @@ USER_EMAIL = os.getenv("EMAIL")
 USER_PASSWORD = os.getenv("PASSWORD")
 
 # URLs de los endpoints
-LOGIN_URL = "https://wineme-api.vercel.app/user/login"
-WINES_URL = "https://wineme-api.vercel.app/api/wines"
+LOGIN_URL = "https://wineme-api-neon.vercel.app/user/login"
+WINES_URL = "https://wineme-api-neon.vercel.app/api/wines"
 
 # Health check state
 health_status = {
@@ -83,7 +83,6 @@ def get_all_wines(token):
     else:
         raise Exception(f"Error al obtener los vinos: {response.text}")
 
-
 def normalizeDF(df):
     ''' normalizes the df '''
     # Convertir las descripciones en una matriz TF-IDF
@@ -99,7 +98,6 @@ def similitudCoseno(df):
     # Calcular la matriz de similitudes
     similarity_matrix_long = cosine_similarity(tfidf_matrix_long)
     return similarity_matrix_long
-
 
 def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
     '''
@@ -142,10 +140,6 @@ def getTopSimilarities(similarity_matrix, df, wine_index, top_n=5):
         print(f"   - {similar_name} --- Descripción: {similar_description}")
     print("Time end: ", datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     return results
-
-@app.post("/ping")
-def ping():
-    return {"ping": "pong"}
 
 @app.get("/health")
 async def health_check():
